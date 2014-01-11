@@ -1,6 +1,5 @@
 use std::path::Path;
-use std::rt::io::file::stat;
-use std::rt::io::io_error;
+use std::io::File;
 
 // iNES ROM format: http://wiki.nesdev.com/w/index.php/INES
 struct NESHeader {
@@ -115,10 +114,7 @@ struct OpInfo {
 
 enum MicroOp {
   Add,
-  Sub,
-  Mul,
-  Div,
-  Cmp,
+  Mov,
   Jmp,
 }
 
@@ -139,84 +135,73 @@ fn read_header(rom : &[u8]) -> ~NESHeader {
 }
 
 fn validate_header(header : &NESHeader) {
-    let magic_str = std::str::from_utf8_slice(header.magic);
+    let magic_str = std::str::from_utf8(header.magic);
     if magic_str != "NES\x1a" || header.padding != [0, 0, 0, 0, 0] {
       fail!("File does not appear to be a valid iNES ROM");
     }
 
-    println("Valid iNES ROM found");
-    println(fmt!("PRG ROM 16KB Pages: %s", header.prg_size.to_str()));
-    println(fmt!("CHR ROM 8KB Pages: %s", header.chr_size.to_str()));
-    println(fmt!("PRG RAM 8KB Pages: %s", header.prg_ram_size.to_str()));
+    println!("Valid iNES ROM found");
+    println!("PRG ROM 16KB Pages: {}", header.prg_size);
+    println!("CHR ROM 8KB Pages: {}", header.chr_size);
+    println!("PRG RAM 8KB Pages: {}", header.prg_ram_size);
 
     if header.flags6 & TrainerMask as u8 == TrainerMask as u8 {
       fail!("ROMs with Trainer Sections are not supported");
     }
 
     if header.flags6 & BatteryMask as u8 == BatteryMask as u8 {
-      println("ROM supports a battery");
+      println!("ROM supports a battery");
     }
 
     let mapper = (header.flags7 & UpperMapperMask as u8) | (header.flags6 & LowerMapperMask as u8);
-    println(fmt!("Mapper is %s", mapper.to_str()));
+    println!("Mapper is {}", mapper);
     if mapper > 0 {
-      fail!("rusticom does not support mapper %s", mapper.to_str());
+      fail!("rusticom does not support mapper {}", mapper);
     }
 
     let ines_version = (header.flags7 & NES20Mask as u8) >> 2;
-    println(fmt!("iNES Version: %s", ines_version.to_str()));
+    println!("iNES Version: {}", ines_version);
     if ines_version > 0 {
       fail!("rusticom does not support this iNES cartridge version");
     }
     
     let mirroring = header.flags6 & MirroringMask as u8;
     if mirroring == 0 {
-      println("ROM is horizontally mirrored");
+      println!("ROM is horizontally mirrored");
     } else if mirroring == 1 {
-      println("ROM is vertically mirrored");
+      println!("ROM is vertically mirrored");
     } else {
-      fail!("rusticom does not support four-screen mirroring: %s", mirroring.to_str());
+      fail!("rusticom does not support four-screen mirroring: {}", mirroring);
     }
 }
 
 fn main() {
-  println("rusticom v0.1");
+  println!("rusticom v0.1");
   
   let args: ~[~str] = ::std::os::args();
   if args.len() != 2 {
-    println("usage: rusticom <path_to_rom_file>");
+    println!("usage: rusticom <path_to_rom_file>");
     return
   }
 
   /*
    * Load the ROM
    */
-  let rom_path = &Path(args[1]);
+  let rom_filename = (args[1]).clone();
+  let rom_path = Path::new(args[1]);
+  
+  if rom_path.is_file() {
+    println!("ROM found, loading...");
+    println!("Size is {} bytes", std::io::fs::stat(&rom_path).size);
+  
+    let mut rom_file = File::open(&rom_path);
+    let rom = rom_file.read_to_end(); 
 
-  do io_error::cond.trap(|_| {
-    println("ROM file not found");
-  }).inside {
-    let info = match stat(rom_path) {
-      Some(s) => s,
-      None => fail!("unknown error stat-ing ROM path")
-    };
-
-    if info.is_file {
-      println("ROM found, loading...");
-      println(fmt!("Size is %s bytes", info.size.to_str()));
+    let header = read_header(rom);
+    validate_header(header);
+  } else {
     
-      let rom = match std::io::read_whole_file(rom_path)  {
-        Ok(r) => r,
-        Err(s) => fail!("can't read rom: %s", s)
-      };
-
-      let header = read_header(rom);
-      validate_header(header);
-
-
-    } else {
-      println("Path does not look like a ROM file");
-    }
+    println!("{} doesn't look like a ROM file", rom_filename);
   }
 
 }
