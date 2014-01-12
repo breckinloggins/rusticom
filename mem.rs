@@ -10,8 +10,8 @@ pub struct Mem {
 }
 
 impl Mem {
-	pub fn new(capacity: uint) -> Mem { 
-		let mut m = Mem { 
+	pub fn new(capacity: uint) -> ~Mem { 
+		let mut m = ~Mem { 
 			capacity: capacity,
 			bytes: vec::with_capacity(capacity as uint) 
 		};
@@ -20,14 +20,14 @@ impl Mem {
 		return m;
 	}
 
-	pub fn read(self, addr: u16) -> u8 {
+	pub fn read(&self, addr: u16) -> u8 {
 		if addr as uint > self.capacity - 1 {
 			fail!("memory fault: attempt to read at 0x{:X}", addr);
 		}
 		return self.bytes[addr];
 	}
 
-	pub fn write(mut self, addr: u16, val: u8) {
+	pub fn write(&mut self, addr: u16, val: u8) {
 		if addr as uint > self.capacity - 1 {
 			fail!("memory fault: attempt to write at 0x{:X}", addr);
 		}
@@ -35,7 +35,7 @@ impl Mem {
 		self.bytes[addr] = val;
 	}
 
-	pub fn fill(mut self, addr: u16, src: &[u8]) {
+	pub fn fill(&mut self, addr: u16, src: &[u8]) {
 		if (addr as uint) + src.len() > self.capacity {
 			fail!("memory fault: attempt to fill {} bytes past memory bounds", src.len())
 		}

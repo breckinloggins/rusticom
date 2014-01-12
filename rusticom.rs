@@ -1,8 +1,10 @@
 use nesfile::ROM;
 use mem::Mem;
+use cpu::CPU;
 
 mod nesfile;
 mod mem;
+mod cpu;
 
 fn main() {
   println!("rusticom v0.1");
@@ -26,11 +28,12 @@ fn main() {
   let prg_rom0 = rom.prg_rom(0);
   
   print!("Loading PRG ROM 0 into memory...");
-  let mem = Mem::new(0x10000);
-
+  let mut mem = Mem::new(0x10000);
   mem.fill(0xc000, prg_rom0);
 
   println!("done.");
-  println!("PRG ROM 0 is {} bytes", prg_rom0.len());
 
+  println!("Executing PRG ROM 0 ({} bytes)", prg_rom0.len());
+  let mut cpu = CPU::new();
+  cpu.run(mem, 0xC000);
 }
