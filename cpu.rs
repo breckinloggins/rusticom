@@ -76,8 +76,6 @@ struct OpInfo {
                                     // boundary
 }
 
-enum MicroOp {
-  Add,
-  Mov,
-  Jmp,
+impl CPU {
+
 }

@@ -19,7 +19,9 @@ pub struct Header {
 }
 
 pub struct ROM {
-	header:			Header
+	header:			Header,
+
+	priv raw_bytes:	~[u8]
 }
 
 enum NESFlags6 {
@@ -47,21 +49,33 @@ impl ROM {
 		let rom_path = Path::new(filename);
   
 		if rom_path.is_file() {
+			let size = fs::stat(&rom_path).size;
+
 		    println!("ROM found, loading...");
-		    println!("Size is {} bytes", fs::stat(&rom_path).size);
+		    println!("Size is {} bytes", size);
 		  
 		    let mut rom_file = File::open(&rom_path);
-		    let rom_bytes = rom_file.read_to_end(); 
-
+		    let rom_bytes = rom_file.read_to_end().to_owned(); 
+		    
 		    let header = read_header(rom_bytes);
 
-    		return match validate_header(&header) {
-    			Ok(_) => Ok(ROM { header: header }),
-    			Err(s) => Err(s)
-    		};
+    		let res = validate_header(&header);
+    		if res != ~"" {
+    			return Err(res);
+    		}
+
+    		return Ok(ROM { header: header, raw_bytes: rom_bytes });
   		} else {
     		return Err(format!("{} doesn't look like a ROM file", filename));
     	}
+  	}
+
+  	pub fn prg_rom(self, bank: u8) -> ~[u8] {
+  		if (bank > self.header.prg_size - 1) {
+  			fail!("invalid PRG ROM bank {}", bank);
+  		}
+
+  		return self.raw_bytes.slice(16 + (bank as uint * 0x4000), 0x4000).to_owned();
   	}
 }
 
@@ -81,10 +95,10 @@ fn read_header(rom : &[u8]) -> Header {
     };
 }
 
-fn validate_header(header : &Header) -> Result<~str, ~str> {
+fn validate_header(header : &Header) -> ~str {
     let magic_str = str::from_utf8(header.magic);
     if magic_str != "NES\x1a" || header.padding != [0, 0, 0, 0, 0] {
-      fail!("File does not appear to be a valid iNES ROM");
+      return ~"File does not appear to be a valid iNES ROM";
     }
 
     println!("Valid iNES ROM found");
@@ -93,7 +107,7 @@ fn validate_header(header : &Header) -> Result<~str, ~str> {
     println!("PRG RAM 8KB Pages: {}", header.prg_ram_size);
 
     if header.flags6 & TrainerMask as u8 == TrainerMask as u8 {
-      return Err(~"ROMs with Trainer Sections are not supported");
+      return ~"ROMs with Trainer Sections are not supported";
     }
 
     if header.flags6 & BatteryMask as u8 == BatteryMask as u8 {
@@ -103,13 +117,13 @@ fn validate_header(header : &Header) -> Result<~str, ~str> {
     let mapper = (header.flags7 & UpperMapperMask as u8) | (header.flags6 & LowerMapperMask as u8);
     println!("Mapper is {}", mapper);
     if mapper > 0 {
-      return Err(format!("rusticom does not support mapper {}", mapper));
+      return format!("rusticom does not support mapper {}", mapper);
     }
 
     let ines_version = (header.flags7 & NES20Mask as u8) >> 2;
     println!("iNES Version: {}", ines_version);
     if ines_version > 0 {
-      return Err(~"rusticom does not support this iNES cartridge version");
+      return ~"rusticom does not support this iNES cartridge version";
     }
     
     let mirroring = header.flags6 & MirroringMask as u8;
@@ -118,9 +132,9 @@ fn validate_header(header : &Header) -> Result<~str, ~str> {
     } else if mirroring == 1 {
       println!("ROM is vertically mirrored");
     } else {
-      return Err(format!("rusticom does not support four-screen mirroring: {}", mirroring));
+      return format!("rusticom does not support four-screen mirroring: {}", mirroring);
     }
 
-    return Ok(~"ok");
+    return ~"";
 }
 

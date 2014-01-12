@@ -1,6 +1,8 @@
 use nesfile::ROM;
+use mem::Mem;
 
 mod nesfile;
+mod mem;
 
 fn main() {
   println!("rusticom v0.1");
@@ -16,29 +18,19 @@ fn main() {
    */
 
   let rom_filename = (args[1]).clone();
-  /* let rom = */ match ROM::open(rom_filename) {
+  let rom = match ROM::open(rom_filename) {
     Ok(r) => r,
     Err(s) => fail!(s)
   };
 
-  /*
-  let rom_path = Path::new(args[1]);
+  let prg_rom0 = rom.prg_rom(0);
   
-  if rom_path.is_file() {
-    println!("ROM found, loading...");
-    println!("Size is {} bytes", std::io::fs::stat(&rom_path).size);
-  
-    let mut rom_file = File::open(&rom_path);
-    let rom = rom_file.read_to_end(); 
+  print!("Loading PRG ROM 0 into memory...");
+  let mem = Mem::new(0x10000);
 
-    let header = read_header(rom);
-    validate_header(header);
-  } else {
-    
-    println!("{} doesn't look like a ROM file", rom_filename);
-  }
-  */
+  mem.fill(0xc000, prg_rom0);
 
-
+  println!("done.");
+  println!("PRG ROM 0 is {} bytes", prg_rom0.len());
 
 }
