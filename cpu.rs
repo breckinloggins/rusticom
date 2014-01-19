@@ -40,6 +40,15 @@ enum AdrMode {
 	//ZpgY	// wraps!
 }
 
+enum Reg {
+	Ar,
+	Xr,
+	Yr,
+	SPr,
+	Pr,
+	PCr
+}
+
 enum Flag {
 	Cf = 0b00000001,			// Bit 1 - Carry
 	Zf = 0b00000010,			// Bit 2 - Zero
@@ -102,32 +111,33 @@ impl CPU {
 
 		let mut scanline : int = 0;		/* TODO: Match nestest.log's starting scanline */
 		loop {
-			let op = match mem.read(self.PC) {
-				0x08 => OpCode(0x08, ~"PHP", Impl, 3, |c, m, _ , _ | c.push8(m, c.P)),
-				0x18 => OpCode(0x18, ~"CLC", Impl, 2, |c, _, _ , _ | c.fclr(Cf)),
-				0x20 => OpCode(0x20, ~"JSR", Abs,  6, |c, m, a1, a2| { c.push16(m, c.PC); c.PC = a2 as u16 << 8 | a1 as u16 }),
-				0x28 => OpCode(0x28, ~"PLP", Impl, 4, |c, m, _ , _ | c.P = c.pull(m)),
-				0x38 => OpCode(0x38, ~"SEC", Impl, 2, |c, _, _ , _ | c.fset(Cf)),
-				0x48 => OpCode(0x48, ~"PHA", Impl, 3, |c, m, _ , _ | c.push8(m, c.A)),
-				0x58 => OpCode(0x58, ~"CLI", Impl, 2, |c, _, _ , _ | c.fclr(If)),
-				0x4C => OpCode(0x4C, ~"JMP", Abs,  3, |c, _, a1, a2| c.PC = a2 as u16 << 8 | a1 as u16),
-				0x68 => OpCode(0x68, ~"PLA", Impl, 4, |c, m, _ , _ | c.A = c.pull(m)),
-				0x78 => OpCode(0x78, ~"SEI", Impl, 2, |c, _, _ , _ | c.fset(If)),
-				0x84 => OpCode(0x84, ~"STY", Zpg,  3, |c, m, a1, _ | c.Y = m.read(a1 as u16)),
-				0x85 => OpCode(0x85, ~"STA", Zpg,  3, |c, m, a1, _ | c.A = m.read(a1 as u16)),
-				0x86 => OpCode(0x86, ~"STX", Zpg,  3, |c, m, a1, _ | c.X = m.read(a1 as u16)),
-				0x90 => OpCode(0x90, ~"BCC", Rel,  2, |c, _, a1, _ | if !c.fis_set(Cf) { c.b_rel(a1) }),
-				0xA0 => OpCode(0xA0, ~"LDY", Imm,  2, |c, _, a1, _ | c.Y = a1),
-				0xA2 => OpCode(0xA2, ~"LDX", Imm,  2, |c, _, a1, _ | c.X = a1),
-				0xA9 => OpCode(0xA9, ~"LDA", Imm,  2, |c, _, a1, _ | c.A = a1),
-				0xB0 => OpCode(0xB0, ~"BCS", Rel,  2, |c, _, a1, _ | if c.fis_set(Cf) { c.b_rel(a1) }),
-				0xB8 => OpCode(0xB8, ~"CLV", Impl, 2, |c, _, _ , _ | c.fclr(Vf)),
-				0xD0 => OpCode(0xD0, ~"BNE", Rel,  2, |c, _, a1, _ | if !c.fis_set(Zf) { c.b_rel(a1) }),
-				0xD8 => OpCode(0xD8, ~"CLD", Impl, 2, |c, _, _ , _ | c.fclr(Df)),
-				0xEA => OpCode(0xEA, ~"NOP", Impl, 2, |_, _, _ , _ | {} ),
-				0xF0 => OpCode(0xF0, ~"BEQ", Rel,  2, |c, _, a1, _ | if c.fis_set(Zf) { c.b_rel(a1) }),
-				0xF8 => OpCode(0xF8, ~"SED", Impl, 2, |c, _, _ , _ | c.fset(Df)),
-				x    => fail!("unimplemented or illegal instruction 0x{:X}", x)
+			let c = mem.read(self.PC);
+			let op = match c {
+				0x08 => OpCode(c, ~"PHP", Impl, 3, |c, m, _ , _ | c.push8(m, c.P)),
+				0x18 => OpCode(c, ~"CLC", Impl, 2, |c, _, _ , _ | c.fclr(Cf)),
+				0x20 => OpCode(c, ~"JSR", Abs,  6, |c, m, a1, a2| { c.push16(m, c.PC); c.PC = a2 as u16 << 8 | a1 as u16 }),
+				0x28 => OpCode(c, ~"PLP", Impl, 4, |c, m, _ , _ | { let src = c.pull(m); c.setreg(Pr, src) }),
+				0x38 => OpCode(c, ~"SEC", Impl, 2, |c, _, _ , _ | c.fset(Cf)),
+				0x48 => OpCode(c, ~"PHA", Impl, 3, |c, m, _ , _ | c.push8(m, c.A)),
+				0x58 => OpCode(c, ~"CLI", Impl, 2, |c, _, _ , _ | c.fclr(If)),
+				0x4C => OpCode(c, ~"JMP", Abs,  3, |c, _, a1, a2| c.PC = a2 as u16 << 8 | a1 as u16),
+				0x68 => OpCode(c, ~"PLA", Impl, 4, |c, m, _ , _ | { c.A = c.pull(m); c.fsetv(Nf, c.A); c.fsetv(Zf, c.A) }),
+				0x78 => OpCode(c, ~"SEI", Impl, 2, |c, _, _ , _ | c.fset(If)),
+				0x84 => OpCode(c, ~"STY", Zpg,  3, |c, m, a1, _ | m.write(a1 as u16, c.Y)),
+				0x85 => OpCode(c, ~"STA", Zpg,  3, |c, m, a1, _ | m.write(a1 as u16, c.A)),
+				0x86 => OpCode(c, ~"STX", Zpg,  3, |c, m, a1, _ | m.write(a1 as u16, c.X)),
+				0x90 => OpCode(c, ~"BCC", Rel,  2, |c, _, a1, _ | if !c.fis_set(Cf) { c.b_rel(a1) }),
+				0xA0 => OpCode(c, ~"LDY", Imm,  2, |c, _, a1, _ | c.setreg(Yr, a1)),
+				0xA2 => OpCode(c, ~"LDX", Imm,  2, |c, _, a1, _ | c.setreg(Xr, a1)),
+				0xA9 => OpCode(c, ~"LDA", Imm,  2, |c, _, a1, _ | c.setreg(Ar, a1)),
+				0xB0 => OpCode(c, ~"BCS", Rel,  2, |c, _, a1, _ | if c.fis_set(Cf) { c.b_rel(a1) }),
+				0xB8 => OpCode(c, ~"CLV", Impl, 2, |c, _, _ , _ | c.fclr(Vf)),
+				0xD0 => OpCode(c, ~"BNE", Rel,  2, |c, _, a1, _ | if !c.fis_set(Zf) { c.b_rel(a1) }),
+				0xD8 => OpCode(c, ~"CLD", Impl, 2, |c, _, _ , _ | c.fclr(Df)),
+				0xEA => OpCode(c, ~"NOP", Impl, 2, |_, _, _ , _ | {} ),
+				0xF0 => OpCode(c, ~"BEQ", Rel,  2, |c, _, a1, _ | if c.fis_set(Zf) { c.b_rel(a1) }),
+				0xF8 => OpCode(c, ~"SED", Impl, 2, |c, _, _ , _ | c.fset(Df)),
+				_    => fail!("unimplemented or illegal instruction 0x{:X}", c)
 			};
 
 			let OpCode(opcode, name, adrmode, cycles, handler) = op;
@@ -164,6 +174,25 @@ impl CPU {
 	fn add_cycles(&mut self, cpu_cycles: u8) {
 		// Convert to master clock (PPU) cycles
 		self.cc = (self.cc + (cpu_cycles as uint) * 3) % 341;
+	}
+
+	//
+	// Regs
+	//
+	fn setreg(&mut self, r: Reg, val: u8) {
+		let set_flags = match r {
+			Ar 	=> { self.A = val; true },
+			Xr 	=> { self.X = val; true },
+			Yr 	=> { self.Y = val; true },
+			Pr 	=> { self.P = val; false },
+			SPr => { self.SP = val as u16; false },
+			PCr => fail!("cannot set PC with setreg")
+		};
+
+		if set_flags {
+			self.fsetv(Nf, val);
+			self.fsetv(Zf, val);
+		}
 	}
 
 	//
@@ -204,6 +233,14 @@ impl CPU {
 		self.P |= f as u8;
 	}
 
+	fn fsetv(&mut self, f: Flag, val: u8) {
+		match f {
+			Nf => if val & 0x80 == 0 	{ self.fclr(Nf) } else { self.fset(Nf) },
+			Zf => if val == 0 			{ self.fclr(Zf) } else { self.fset(Zf) },
+			_  => fail!("Invalid flag {} sent to fsetv", f as u8)
+		}
+	}
+
 	fn fclr(&mut self, f: Flag) {
 		self.P &= !(f as u8);
 	}
@@ -237,7 +274,7 @@ impl CPU {
 				// Same page, only took one extra cycle
 				1
 			} else {
-				// Crosse page boundary, took two cycles
+				// Crossed page boundary, took two cycles
 				2
 			});
 	}
