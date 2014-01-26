@@ -35,5 +35,6 @@ fn main() {
 
   println!("Executing PRG ROM 0 ({} bytes)", prg_rom0.len());
   let mut cpu = CPU::new();
-  cpu.run(mem, 0xC000);
+  cpu.reset(0xC000);
+  loop { cpu.tick(mem); }
 }
