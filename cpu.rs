@@ -25,90 +25,66 @@ pub struct CPU {
 // http://www.llx.com/~nparker/a2/opcodes.html
 // http://www.masswerk.at/6502/6502_instruction_set.html
 
-/*
 enum Op {
-  ADC   Add Memory to Accumulator with Carry
-  AND   "AND" Memory with Accumulator
-  |     ASL   Shift Left One Bit (Memory or Accumulator)
-  |
-  |     BCC   Branch on Carry Clear
-  |     BCS   Branch on Carry Set
-  |     BEQ   Branch on Result Zero
-  |     BIT   Test Bits in Memory with Accumulator
-  |     BMI   Branch on Result Minus
-  |     BNE   Branch on Result not Zero
-  |     BPL   Branch on Result Plus
-  |     BRK   Force Break
-  |     BVC   Branch on Overflow Clear
-  |     BVS   Branch on Overflow Set
-  |
-  |     CLC   Clear Carry Flag
-  |     CLD   Clear Decimal Mode
-  |     CLI   Clear interrupt Disable Bit
-  |     CLV   Clear Overflow Flag
-  |     CMP   Compare Memory and Accumulator
-  |     CPX   Compare Memory and Index X
-  |     CPY   Compare Memory and Index Y
-  |
-  |     DEC   Decrement Memory by One
-  |     DEX   Decrement Index X by One
-  |     DEY   Decrement Index Y by One
-  |
-  |     EOR   "Exclusive-Or" Memory with Accumulator
-  |
-  |     INC   Increment Memory by One
-  |     INX   Increment Index X by One
-  |     INY   Increment Index Y by One
-  |
-  |     JMP   Jump to New Location
-  |
-  +------------------------------------------------------------------------
-
-
-  ------------------------------------------------------------------------+
-                                                                          |
-         MCS6502 MICROPROCESSOR INSTRUCTION SET - ALPHABETIC SEQUENCE     |
-                                                                          |
-  ------------------------------------------------------------------------+
-                                                                          |
-        JSR   Jump to New Location Saving Return Address                  |
-                                                                          |
-        LDA   Load Accumulator with Memory                                |
-        LDX   Load Index X with Memory                                    |
-        LDY   Load Index Y with Memory                                    |
-        LSR   Shift Right One Bit (Memory or Accumulator)                 |
-                                                                          |
-        NOP   No Operation                                                |
-                                                                          |
-        ORA   "OR" Memory with Accumulator                                |
-                                                                          |
-        PHA   Push Accumulator on Stack                                   |
-        PHP   Push Processor Status on Stack                              |
-        PLA   Pull Accumulator from Stack                                 |
-        PLP   Pull Processor Status from Stack                            |
-                                                                          |
-        ROL   Rotate One Bit Left (Memory or Accumulator)                 |
-        ROR   Rotate One Bit Right (Memory or Accumulator)                |
-        RTI   Return from Interrupt                                       |
-        RTS   Return from Subroutine                                      |
-                                                                          |
-        SBC   Subtract Memory from Accumulator with Borrow                |
-        SEC   Set Carry Flag                                              |
-        SED   Set Decimal Mode                                            |
-        SEI   Set Interrupt Disable Status                                |
-        STA   Store Accumulator in Memory                                 |
-        STX   Store Index X in Memory                                     |
-        STY   Store Index Y in Memory                                     |
-                                                                          |
-        TAX   Transfer Accumulator to Index X                             |
-        TAY   Transfer Accumulator to Index Y                             |
-        TSX   Transfer Stack Pointer to Index X                           |
-        TXA   Transfer Index X to Accumulator                             |
-        TXS   Transfer Index X to Stack Pointer                           |
-        TYA   Transfer Index Y to Accumulator                             |
-
+  ADC,               // Add Memory to Accumulator with Carry
+  AND,               // "AND" Memory with Accumulator
+  ASL,               // Shift Left One Bit (Memory or Accumulator)
+  BCC,               // Branch on Carry Clear
+  BCS,               // Branch on Carry Set
+  BEQ,               // Branch on Result Zero
+  BIT,               // Test Bits in Memory with Accumulator
+  BMI,               // Branch on Result Minus
+  BNE,               // Branch on Result not Zero
+  BPL,               // Branch on Result Plus
+  BRK,               // Force Break
+  BVC,               // Branch on Overflow Clear
+  BVS,               // Branch on Overflow Set
+  CLC,               // Clear Carry Flag
+  CLD,               // Clear Decimal Mode
+  CLI,               // Clear interrupt Disable Bit
+  CLV,               // Clear Overflow Flag
+  CMP,               // Compare Memory and Accumulator
+  CPX,               // Compare Memory and Index X
+  CPY,               // Compare Memory and Index Y
+  DEC,               // Decrement Memory by One
+  DEX,               // Decrement Index X by One
+  DEY,               // Decrement Index Y by One
+  EOR,               // "Exclusive-Or" Memory with Accumulator
+  INC,               // Increment Memory by One
+  INX,               // Increment Index X by One
+  INY,               // Increment Index Y by One
+  JMP,               // Jump to New Location
+  JSR,               // Jump to New Location Saving Return Address      
+  LDA,               // Load Accumulator with Memory                 
+  LDX,               // Load Index X with Memory                     
+  LDY,               // Load Index Y with Memory                     
+  LSR,               // Shift Right One Bit (Memory or Accumulator)  
+  NOP,               // No Operation                                 
+  ORA,               // "OR" Memory with Accumulator                 
+  PHA,               // Push Accumulator on Stack                    
+  PHP,               // Push Processor Status on Stack               
+  PLA,               // Pull Accumulator from Stack                  
+  PLP,               // Pull Processor Status from Stack             
+  ROL,               // Rotate One Bit Left (Memory or Accumulator)  
+  ROR,               // Rotate One Bit Right (Memory or Accumulator) 
+  RTI,               // Return from Interrupt                        
+  RTS,               // Return from Subroutine                       
+  SBC,               // Subtract Memory from Accumulator with Borrow 
+  SEC,               // Set Carry Flag                               
+  SED,               // Set Decimal Mode                             
+  SEI,               // Set Interrupt Disable Status                 
+  STA,               // Store Accumulator in Memory                  
+  STX,               // Store Index X in Memory                      
+  STY,               // Store Index Y in Memory                      
+  TAX,               // Transfer Accumulator to Index X              
+  TAY,               // Transfer Accumulator to Index Y              
+  TSX,               // Transfer Stack Pointer to Index X            
+  TXA,               // Transfer Index X to Accumulator              
+  TXS,               // Transfer Index X to Stack Pointer            
+  TYA,               // Transfer Index Y to Accumulator
+  KIL,               // Pseudo-op for invalid instructions            
 }
-*/
+
 
 enum AdrMode {
   A,
@@ -199,55 +175,64 @@ impl CPU {
 
   pub fn tick(&mut self, mem: &mut Mem) {
     let c = mem.read(self.PC);
-    let op = match c {
-      0x08 => OpCode(c, ~"PHP", Impl, 3, |c, m, _ , _ | c.push8(m, c.P)),
-      0x09 => OpCode(c, ~"ORA", Imm,  2, |c, _, a1, _ | c.alu_ORA(a1)),
-      0x10 => OpCode(c, ~"BPL", Rel,  2, |c, _, a1, _ | if !c.fis_set(Nf) { c.b_rel(a1) }),
-      0x18 => OpCode(c, ~"CLC", Impl, 2, |c, _, _ , _ | c.fclr(Cf)),
-      0x20 => OpCode(c, ~"JSR", Abs,  6, |c, m, a1, a2| { c.push16(m, c.PC-1); c.PC = a2 as u16 << 8 | a1 as u16 }),
-      0x24 => OpCode(c, ~"BIT", Zpg,  3, |c, m, a1, _ | c.alu_BIT(m, a1)),
-      0x28 => OpCode(c, ~"PLP", Impl, 4, |c, m, _ , _ | { let src = c.pull(m); c.setreg(Pr, src) }),
-      0x29 => OpCode(c, ~"AND", Imm,  2, |c, m, a1, _ | c.alu_AND(a1)),
-      0x30 => OpCode(c, ~"BMI", Rel,  2, |c, m, a1, _ | if c.fis_set(Nf) { c.b_rel(a1) }),
-      0x38 => OpCode(c, ~"SEC", Impl, 2, |c, _, _ , _ | c.fset(Cf)),
-      0x48 => OpCode(c, ~"PHA", Impl, 3, |c, m, _ , _ | c.push8(m, c.A)),
-      0x49 => OpCode(c, ~"EOR", Imm,  2, |c, _, a1, _ | c.alu_EOR(a1)),
-      0x50 => OpCode(c, ~"BVC", Rel,  2, |c, _, a1, _ | if !c.fis_set(Vf) { c.b_rel(a1) }),
-      0x58 => OpCode(c, ~"CLI", Impl, 2, |c, _, _ , _ | c.fclr(If)),
-      0x4C => OpCode(c, ~"JMP", Abs,  3, |c, _, a1, a2| c.PC = a2 as u16 << 8 | a1 as u16),
-      0x60 => OpCode(c, ~"RTS", Impl, 6, |c, m, _ , _ | c.PC = ((c.pull(m) as u16) | ((c.pull(m) as u16) << 8))+1),
-      0x68 => OpCode(c, ~"PLA", Impl, 4, |c, m, _ , _ | { c.A = c.pull(m); c.fsetv(Nf, c.A); c.fsetv(Zf, c.A) }),
-      0x69 => OpCode(c, ~"ADC", Imm,  2, |c, _, a1, _ | c.alu_ADC(a1)),
-      0x70 => OpCode(c, ~"BVS", Rel,  2, |c, _, a1, _ | if c.fis_set(Vf) { c.b_rel(a1) }),
-      0x78 => OpCode(c, ~"SEI", Impl, 2, |c, _, _ , _ | c.fset(If)),
-      0x84 => OpCode(c, ~"STY", Zpg,  3, |c, m, a1, _ | m.write(a1 as u16, c.Y)),
-      0x85 => OpCode(c, ~"STA", Zpg,  3, |c, m, a1, _ | m.write(a1 as u16, c.A)),
-      0x86 => OpCode(c, ~"STX", Zpg,  3, |c, m, a1, _ | m.write(a1 as u16, c.X)),
-      0x88 => OpCode(c, ~"DEY", Impl, 2, |c, _, _ , _ | c.alu_DEr(Yr)),
-      0x8A => OpCode(c, ~"TXA", Impl, 2, |c, _, _ , _ | c.alu_Trr(Xr, Ar)),
-      0x90 => OpCode(c, ~"BCC", Rel,  2, |c, _, a1, _ | if !c.fis_set(Cf) { c.b_rel(a1) }),
-      0x98 => OpCode(c, ~"TYA", Impl, 2, |c, _, _ , _ | c.alu_Trr(Yr, Ar)),
-      0x9A => OpCode(c, ~"TXS", Impl, 2, |c, _, _ , _ | c.alu_Trr(Xr, SPr)),
-      0xA0 => OpCode(c, ~"LDY", Imm,  2, |c, _, a1, _ | c.setreg(Yr, a1)),
-      0xA2 => OpCode(c, ~"LDX", Imm,  2, |c, _, a1, _ | c.setreg(Xr, a1)),
-      0xA8 => OpCode(c, ~"TAY", Impl, 2, |c, _, _ , _ | c.alu_Trr(Ar, Yr)),
-      0xA9 => OpCode(c, ~"LDA", Imm,  2, |c, _, a1, _ | c.setreg(Ar, a1)),
-      0xAA => OpCode(c, ~"TAX", Impl, 2, |c, _, _ , _ | c.alu_Trr(Ar, Xr)),
-      0xB0 => OpCode(c, ~"BCS", Rel,  2, |c, _, a1, _ | if c.fis_set(Cf) { c.b_rel(a1) }),
-      0xB8 => OpCode(c, ~"CLV", Impl, 2, |c, _, _ , _ | c.fclr(Vf)),
-      0xBA => OpCode(c, ~"TSX", Impl, 2, |c, _, _ , _ | c.alu_Trr(SPr, Xr)),
-      0xC0 => OpCode(c, ~"CPY", Imm,  2, |c, _, a1, _ | c.alu_CMP(Yr, a1)),
-      0xC8 => OpCode(c, ~"INY", Impl, 2, |c, _, _ , _ | c.alu_INr(Yr)),
-      0xC9 => OpCode(c, ~"CMP", Imm,  2, |c, _, a1, _ | c.alu_CMP(Ar, a1)),
-      0xCA => OpCode(c, ~"DEX", Impl, 2, |c, _, _ , _ | c.alu_DEr(Xr)),
-      0xD0 => OpCode(c, ~"BNE", Rel,  2, |c, _, a1, _ | if !c.fis_set(Zf) { c.b_rel(a1) }),
-      0xD8 => OpCode(c, ~"CLD", Impl, 2, |c, _, _ , _ | c.fclr(Df)),
-      0xE0 => OpCode(c, ~"CPX", Imm,  2, |c, _, a1, _ | c.alu_CMP(Xr, a1)),
-      0xE8 => OpCode(c, ~"INX", Impl, 2, |c, _, _ , _ | c.alu_INr(Xr)),
-      0xE9 => OpCode(c, ~"SBC", Imm,  2, |c, _, a1, _ | c.alu_SBC(a1)),
-      0xEA => OpCode(c, ~"NOP", Impl, 2, |_, _, _ , _ | {} ),
-      0xF0 => OpCode(c, ~"BEQ", Rel,  2, |c, _, a1, _ | if c.fis_set(Zf) { c.b_rel(a1) }),
-      0xF8 => OpCode(c, ~"SED", Impl, 2, |c, _, _ , _ | c.fset(Df)),
+    let opc = CPU::decode_op(c);
+    let op = match opc {
+      ADC => OpCode(c, ~"ADC", Imm,  2, |c, _, a1, _ | c.alu_ADC(a1)),
+      AND => OpCode(c, ~"AND", Imm,  2, |c, m, a1, _ | c.alu_AND(a1)),
+      ASL => OpCode(c, ~"ASL", Impl, 2, |_, _, _ , _ | fail!("ASL not implemented")),
+      BCC => OpCode(c, ~"BCC", Rel,  2, |c, _, a1, _ | if !c.fis_set(Cf) { c.b_rel(a1) }),
+      BCS => OpCode(c, ~"BCS", Rel,  2, |c, _, a1, _ | if c.fis_set(Cf) { c.b_rel(a1) }),
+      BEQ => OpCode(c, ~"BEQ", Rel,  2, |c, _, a1, _ | if c.fis_set(Zf) { c.b_rel(a1) }),
+      BIT => OpCode(c, ~"BIT", Zpg,  3, |c, m, a1, _ | c.alu_BIT(m, a1)),
+      BMI => OpCode(c, ~"BMI", Rel,  2, |c, m, a1, _ | if c.fis_set(Nf) { c.b_rel(a1) }),
+      BNE => OpCode(c, ~"BNE", Rel,  2, |c, _, a1, _ | if !c.fis_set(Zf) { c.b_rel(a1) }),
+      BPL => OpCode(c, ~"BPL", Rel,  2, |c, _, a1, _ | if !c.fis_set(Nf) { c.b_rel(a1) }),
+      BRK => OpCode(c, ~"BRK", Impl, 7, |c, _, _ , _ | fail!("BRK not implemented")),
+      BVC => OpCode(c, ~"BVC", Rel,  2, |c, _, a1, _ | if !c.fis_set(Vf) { c.b_rel(a1) }),
+      BVS => OpCode(c, ~"BVS", Rel,  2, |c, _, a1, _ | if c.fis_set(Vf) { c.b_rel(a1) }),
+      CLC => OpCode(c, ~"CLC", Impl, 2, |c, _, _ , _ | c.fclr(Cf)),
+      CLD => OpCode(c, ~"CLD", Impl, 2, |c, _, _ , _ | c.fclr(Df)),
+      CLI => OpCode(c, ~"CLI", Impl, 2, |c, _, _ , _ | c.fclr(If)),
+      CLV => OpCode(c, ~"CLV", Impl, 2, |c, _, _ , _ | c.fclr(Vf)),
+      CMP => OpCode(c, ~"CMP", Imm,  2, |c, _, a1, _ | c.alu_CMP(Ar, a1)),
+      CPX => OpCode(c, ~"CPX", Imm,  2, |c, _, a1, _ | c.alu_CMP(Xr, a1)),
+      CPY => OpCode(c, ~"CPY", Imm,  2, |c, _, a1, _ | c.alu_CMP(Yr, a1)),
+      DEC => OpCode(c, ~"DEC", Zpg,  5, |_, _, _ , _ | fail!("DEC not implemented")),
+      DEX => OpCode(c, ~"DEX", Impl, 2, |c, _, _ , _ | c.alu_DEr(Xr)),
+      DEY => OpCode(c, ~"DEY", Impl, 2, |c, _, _ , _ | c.alu_DEr(Yr)),
+      EOR => OpCode(c, ~"EOR", Imm,  2, |c, _, a1, _ | c.alu_EOR(a1)),
+      INC => OpCode(c, ~"INC", Zpg,  5, |_, _, _ , _ | fail!("INC not implemented")),
+      INX => OpCode(c, ~"INX", Impl, 2, |c, _, _ , _ | c.alu_INr(Xr)),
+      INY => OpCode(c, ~"INY", Impl, 2, |c, _, _ , _ | c.alu_INr(Yr)),
+      JMP => OpCode(c, ~"JMP", Abs,  3, |c, _, a1, a2| c.PC = a2 as u16 << 8 | a1 as u16),
+      JSR => OpCode(c, ~"JSR", Abs,  6, |c, m, a1, a2| { c.push16(m, c.PC-1); c.PC = a2 as u16 << 8 | a1 as u16 }),
+      LDA => OpCode(c, ~"LDA", Imm,  2, |c, _, a1, _ | c.setreg(Ar, a1)),
+      LDX => OpCode(c, ~"LDX", Imm,  2, |c, _, a1, _ | c.setreg(Xr, a1)),
+      LDY => OpCode(c, ~"LDY", Imm,  2, |c, _, a1, _ | c.setreg(Yr, a1)),
+      LSR => OpCode(c, ~"LSR", Impl, 2, |_, _, _ , _ | fail!("LSR not implemented")),
+      NOP => OpCode(c, ~"NOP", Impl, 2, |_, _, _ , _ | {} ),
+      ORA => OpCode(c, ~"ORA", Imm,  2, |c, _, a1, _ | c.alu_ORA(a1)),
+      PHA => OpCode(c, ~"PHA", Impl, 3, |c, m, _ , _ | c.push8(m, c.A)),
+      PHP => OpCode(c, ~"PHP", Impl, 3, |c, m, _ , _ | c.push8(m, c.P)),
+      PLA => OpCode(c, ~"PLA", Impl, 4, |c, m, _ , _ | { c.A = c.pull(m); c.fsetv(Nf, c.A); c.fsetv(Zf, c.A) }),
+      PLP => OpCode(c, ~"PLP", Impl, 4, |c, m, _ , _ | { let src = c.pull(m); c.setreg(Pr, src) }),
+      ROL => OpCode(c, ~"ROL", Impl, 2, |_, _, _ , _ | fail!("ROL not implemented")),
+      ROR => OpCode(c, ~"ROR", Impl, 2, |_, _, _ , _ | fail!("ROR not implemented")),
+      RTI => OpCode(c, ~"RTI", Impl, 6, |_, _, _ , _ | fail!("RTI not implemented")),
+      RTS => OpCode(c, ~"RTS", Impl, 6, |c, m, _ , _ | c.PC = ((c.pull(m) as u16) | ((c.pull(m) as u16) << 8))+1),
+      SBC => OpCode(c, ~"SBC", Imm,  2, |c, _, a1, _ | c.alu_SBC(a1)),
+      SEC => OpCode(c, ~"SEC", Impl, 2, |c, _, _ , _ | c.fset(Cf)),
+      SED => OpCode(c, ~"SED", Impl, 2, |c, _, _ , _ | c.fset(Df)),
+      SEI => OpCode(c, ~"SEI", Impl, 2, |c, _, _ , _ | c.fset(If)),
+      STA => OpCode(c, ~"STA", Zpg,  3, |c, m, a1, _ | m.write(a1 as u16, c.A)),
+      STX => OpCode(c, ~"STX", Zpg,  3, |c, m, a1, _ | m.write(a1 as u16, c.X)),
+      STY => OpCode(c, ~"STY", Zpg,  3, |c, m, a1, _ | m.write(a1 as u16, c.Y)),
+      TAX => OpCode(c, ~"TAX", Impl, 2, |c, _, _ , _ | c.alu_Trr(Ar, Xr)),
+      TAY => OpCode(c, ~"TAY", Impl, 2, |c, _, _ , _ | c.alu_Trr(Ar, Yr)),
+      TSX => OpCode(c, ~"TSX", Impl, 2, |c, _, _ , _ | c.alu_Trr(SPr, Xr)),
+      TXA => OpCode(c, ~"TXA", Impl, 2, |c, _, _ , _ | c.alu_Trr(Xr, Ar)),
+      TXS => OpCode(c, ~"TXS", Impl, 2, |c, _, _ , _ | c.alu_Trr(Xr, SPr)),
+      TYA => OpCode(c, ~"TYA", Impl, 2, |c, _, _ , _ | c.alu_Trr(Yr, Ar)),
       _    => fail!("unimplemented or illegal instruction 0x{:X} at 0x{:X}", c, self.PC)
     };
 
@@ -281,8 +266,133 @@ impl CPU {
   // 
   // Decode
   //
-  fn decode(&self, c: u8) /* -> OpCode */ {
+  /*
+  fn decode(c: u8) -> OpCode {
+    let op = CPU::decode_op(c);
 
+  }
+  */
+  fn decode_op(c: u8) -> Op {
+    
+    // Try directly-encoded opcodes first
+    let mut op = CPU::decode_op_direct(c);
+    if !CPU::op_is_KIL(op) {
+      return op;
+    }
+    
+    // Conditional have a special encoding
+    op = CPU::decode_op_branch(c);
+    if !CPU::op_is_KIL(op) {
+      return op;
+    }
+
+    // The rest of the opcodes break down into aaabbbcc 
+    // format
+    let aaa = (c & 0xE0) >> 5;
+    //let bbb = (c & 0x1C) >> 2;
+    let cc = c & 0x3;
+    op = match cc {
+      0b00 => CPU::decode_op_00(aaa),
+      0b01 => CPU::decode_op_01(aaa),
+      0b10 => CPU::decode_op_10(aaa),
+      _    => KIL
+    };
+
+    return op;
+  }
+
+  fn decode_op_direct(c: u8) -> Op {
+    match c {
+      0x00 => BRK,
+      0x08 => PHP,
+      0x18 => CLC,
+      0x20 => JSR,
+      0x28 => PLP,
+      0x38 => SEC,
+      0x40 => RTI,
+      0x48 => PHA,
+      0x58 => CLI,
+      0x60 => RTS,
+      0x68 => PLA,
+      0x78 => SEI,
+      0x88 => DEY,
+      0x8A => TXA,
+      0x98 => TYA,
+      0x9A => TXS,
+      0xA8 => TAY,
+      0xAA => TAX,
+      0xB8 => CLV,
+      0xBA => TSX,
+      0xC8 => INY,
+      0xCA => DEX,
+      0xD8 => CLD,
+      0xE8 => INX,
+      0xEA => NOP,
+      0xF8 => SED,
+      _    => KIL
+    }
+  }
+
+  fn decode_op_branch(c: u8) -> Op {
+    match c {
+      0x10 => BPL,
+      0x30 => BMI,
+      0x50 => BVC,
+      0x70 => BVS,
+      0x90 => BCC,
+      0xB0 => BCS,
+      0xD0 => BNE,
+      0xF0 => BEQ,
+      _    => KIL
+    }
+  }
+
+  fn decode_op_00(aaa: u8) -> Op {
+    match aaa {
+      0b001 => BIT,
+      0b010 => JMP, 
+      0b011 => JMP,
+      0b100 => STY,
+      0b101 => LDY,
+      0b110 => CPY,
+      0b111 => CPX,
+      _     => KIL
+    }
+  }
+
+  fn decode_op_01(aaa: u8) -> Op {
+    match aaa {
+      0b000 => ORA,
+      0b001 => AND,
+      0b010 => EOR,
+      0b011 => ADC,
+      0b100 => STA,
+      0b101 => LDA,
+      0b110 => CMP,
+      0b111 => SBC,
+      _     => KIL
+    }
+  }
+
+  fn decode_op_10(aaa: u8) -> Op {
+    match aaa {
+      0b000 => ASL,
+      0b001 => ROL,
+      0b010 => LSR,
+      0b011 => ROR, 
+      0b100 => STX,
+      0b101 => LDX,
+      0b110 => DEC,
+      0b111 => INC,
+      _     => KIL
+    }
+  }
+
+  fn op_is_KIL(op: Op) -> bool {
+    match op {
+      KIL => true,
+      _   => false
+    }
   }
 
   //
