@@ -233,7 +233,7 @@ impl CPU {
       TXA => OpCode(c, ~"TXA", Impl, 2, |c, _, _ , _ | c.alu_Trr(Xr, Ar)),
       TXS => OpCode(c, ~"TXS", Impl, 2, |c, _, _ , _ | c.alu_Trr(Xr, SPr)),
       TYA => OpCode(c, ~"TYA", Impl, 2, |c, _, _ , _ | c.alu_Trr(Yr, Ar)),
-      _    => fail!("unimplemented or illegal instruction 0x{:X} at 0x{:X}", c, self.PC)
+      KIL => fail!("CPU halted (KIL): illegal instruction 0x{:X} at 0x{:X}", c, self.PC)
     };
 
     let OpCode(opcode, name, adrmode, cycles, handler) = op;
